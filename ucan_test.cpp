@@ -15,11 +15,13 @@ int integer_compare(void* _a, void* _b) {
 void sum_base_case(void* key, void* value, AugmentationResult* output) {
 	cout << "   [" << (long long)value << "]" << endl;
 	output->data.l = (long long)value;
+	output->data_length = 1;
 }
 
 void sum_compute(const AugmentationResult* a, const AugmentationResult* b, AugmentationResult* output) {
 	cout << "   [" << a->data.l << " + " << b->data.l << "]" << endl;
 	output->data.l = a->data.l + b->data.l;
+	output->data_length = a->data_length + b->data_length;
 }
 
 bool sum_compare(const AugmentationResult* a, const AugmentationResult* b) {
