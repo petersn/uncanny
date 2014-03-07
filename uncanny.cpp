@@ -47,6 +47,7 @@ bool AugmentationCtx::delete_augmentation(int aug_id) {
 	if (not augs.count(aug_id)) return false;
 	augs.erase(aug_id);
 	recompute_schema();
+	return true;
 }
 
 // Recomputes which augmentation goes in which AugmentationData slot.
@@ -69,9 +70,9 @@ void AugmentationData::update_schema(AugmentationCtx* aug_ctx) {
 	AugmentationResult fill_with;
 	fill_with.clean = false;
 	vector<AugmentationResult> new_results;
-	new_results.resize(aug_ctx->augs.size());
+	new_results.resize(aug_ctx->augs.size(), fill_with);
 	// Copy over each old result, if it is clean, and still in the schema somewhere.
-	for (int i=0; i<results.size(); i++) {
+	for (unsigned int i=0; i<results.size(); i++) {
 		AugmentationResult& r = results[i];
 		if (r.clean and aug_ctx->augs.count(r.aug_id))
 			new_results[aug_ctx->augs[r.aug_id].schema_index] = r;
@@ -241,7 +242,6 @@ void Tree::insert(void* key, void* value) {
 	}
 	if (key > here->key) here->right = leaf;
 	else here->left = leaf;
-	Node* ptr = leaf;
 	// Rebalance the tree.
 	while (leaf != NULL) {
 		if (not rebalance_node(leaf))
@@ -443,7 +443,7 @@ size_t Tree::compute_augmentation_cut(Augmentation* aug, Node* node, void* key, 
 size_t Tree::compute_augmentation_range(Augmentation* aug, Node* node, void* low_key, bool low_inclusive, void* high_key, bool high_inclusive, bool good_low, bool good_high, AugmentationResult* output) {
 	int low_comp = cmp_f(node->key, low_key);
 	if (low_comp < 0 or (low_comp == 0 and not low_inclusive)) {
-		cout << "Too low: " << (long long) node->key << endl;
+//		cout << "Too low: " << (long long) node->key << endl;
 		// We're too low.
 		if (node->right == NULL)
 			return 0;
@@ -451,13 +451,14 @@ size_t Tree::compute_augmentation_range(Augmentation* aug, Node* node, void* low
 	}
 	int high_comp = cmp_f(node->key, high_key);
 	if (high_comp > 0 or (high_comp == 0 and not high_inclusive)) {
-		cout << "Too high: " << (long long) node->key << endl;
+//		cout << "Too high: " << (long long) node->key << endl;
 		// We're too high.
 		if (node->left == NULL)
 			return 0;
 		return compute_augmentation_range(aug, node->left, low_key, low_inclusive, high_key, high_inclusive, good_low, high_comp == 0, output);
 	}
-	cout << "Edge? " << (long long) node->key << endl;
+//	cout << "Edge? " << (long long) node->key << endl;
+//	cout << "Anything?" << endl;
 	// Catch the two edge cases, where the key is one of our inclusive bounds.
 	EDGE_CASE(low_comp, node->right, \
 		compute_augmentation_range(aug, node->right, low_key, low_inclusive, high_key, high_inclusive, true, good_high, &better_result))
@@ -465,11 +466,11 @@ size_t Tree::compute_augmentation_range(Augmentation* aug, Node* node, void* low
 		compute_augmentation_range(aug, node->left, low_key, low_inclusive, high_key, high_inclusive, good_low, true, &better_result))
 	// Once the code reaches here we know that node is between the two keys.
 	if (good_low and good_high) {
-		cout << "Great: " << (long long) node->key << endl;
+//		cout << "Great: " << (long long) node->key << endl;
 		// We're good on both sides, do the super-efficient thing.
 		return compute_augmentation(aug, node, output);
 	}
-	cout << "Good: " << (long long) node->key << endl;
+//	cout << "Good: " << (long long) node->key << endl;
 	AUG_COMPUTE_BOTH_SUBTREES( \
 		compute_augmentation_range(aug, node->left, low_key, low_inclusive, high_key, high_inclusive, good_low, true, &temp), \
 		compute_augmentation_range(aug, node->right, low_key, low_inclusive, high_key, high_inclusive, true, good_high, &temp))
@@ -513,7 +514,7 @@ size_t Tree::augment_cut(int aug_id, void* key, int comparison_type, Augmentatio
 // Make some convenience functions.
 #define AUG_CONV(name, val) \
 size_t Tree::name(int aug_id, void* key, AugmentationResult* output) { \
-	augment_cut(aug_id, key, val, output); \
+	return augment_cut(aug_id, key, val, output); \
 }
 
 AUG_CONV(augment_lt, -2)

@@ -41,13 +41,13 @@ int main(int argc, char** argv) {
 
 	AugmentationResult output;
 
-	t.augment_lt(aug_id, (void*)1000, &output);
+//	t.augment_lt(aug_id, (void*)1000, &output);
 
 //	t.pprint();
 
 	for (int i=0; i<5; i++) {
-		t.augment_lte(aug_id, (void*)24, &output);
-		cout << "Result: " << (long long)output.data.l << endl;
+//		t.augment_lte(aug_id, (void*)24, &output);
+//		cout << "Result: " << (long long)output.data.l << endl;
 		if (i == 1)
 			t.remove((void*)15);
 		if (i == 2)
@@ -56,8 +56,10 @@ int main(int argc, char** argv) {
 			t.insert((void*)1, (void*)11);
 	}
 
-	t.augment_range(aug_id, (void*)7, false, (void*)26, true, &output);
-	cout << "Range result: " << (long long)output.data.l << endl;
+	for (int i=0; i<2; i++) {
+		t.augment_range(aug_id, (void*)7, false, (void*)26, true, &output);
+		cout << "Range result: " << (long long)output.data.l << endl;
+	}
 
 	return 0;
 }

@@ -1,8 +1,8 @@
 
-FLAGS=-Wall -O3 -g -ffast-math -std=c++11
+CPPFLAGS=-Wall -O3 -g -ffast-math -std=c++0x
 
 ucan_test: ucan_test.o uncanny.o Makefile
-	g++ -o $@ $(CFLAGS) $< uncanny.o
+	g++ -o $@ $(CPPFLAGS) $< uncanny.o
 
 .PHONY: clean
 clean:
