@@ -190,13 +190,18 @@ void Tree::pprint() {
 	else root->pprint(0);
 }
 
-void** Tree::get(void* key) {
+Node* Tree::get_node(void* key) {
 	Node* here = root;
 	int last_result;
 	while (here != NULL and (last_result = cmp_f(key, here->key)) != 0) {
 		if (last_result > 0) here = here->right;
 		else here = here->left;
 	}
+	return here;
+}
+
+void** Tree::get(void* key) {
+	Node* here = get_node(key);
 	// Key not found. :(
 	if (here == NULL) return NULL;
 	return &here->value;
@@ -352,6 +357,27 @@ void Tree::remove(void* key) {
 		} \
 	}
 
+#define EDGE_CASE(comp, better, call) \
+	if (comp == 0) { \
+		/* We're JUST ont he border of the tree-cut, better child only. */ \
+		if (better == NULL) { \
+			/* We have no better child, so it's just us. */ \
+			aug->base_case(node->key, node->value, output); \
+			return 1; \
+		} \
+		AugmentationResult temp; \
+		aug->base_case(node->key, node->value, &temp); \
+		AugmentationResult better_result; \
+		size_t elements = call; \
+		/* Early out for correctness! */ \
+		if (elements == 0) { \
+			*output = temp; \
+			return 1; \
+		} \
+		aug->compute(&better_result, &temp, output); \
+		return elements + 1; \
+	}
+
 size_t Tree::compute_augmentation(Augmentation* aug, Node* node, AugmentationResult* output) {
 	if (node->aug_data == NULL) {
 		// Start a cache for the node.
@@ -389,39 +415,18 @@ size_t Tree::compute_augmentation_cut(Augmentation* aug, Node* node, void* key, 
 	// sure that less than searches have the opposite sense.
 	comparison *= comparison_type;
 	// Next, we remap equals if this is a strong comparison.
-	if (comparison == 0 and (comparison_type == 2 or comparison_type == -2))
-		comparison = -1;
 	// Define macros that move us further and closer to the cut.
 #define GET_BETTER(node) (comparison_type < 0 ? node->left : node->right)
 #define GET_WORSE(node) (comparison_type < 0 ? node->right : node->left)
-	if (comparison < 0) {
+	if (comparison < 0 or (comparison == 0 and (comparison_type == -2 or comparison_type == 2))) {
 //		cout << "Wrong at: " << (long long) node->key << endl;
 		// We're on the wrong side of the tree-cut, go left.
 		if (GET_BETTER(node) == NULL)
 			return 0; // No good value at all!
-		return compute_augmentation_cut(aug, GET_BETTER(node), key, comparison_type, false, output);
-	} else if (comparison == 0) {
-//		cout << "Border at: " << (long long) node->key << endl;
-		// We're JUST on the border of the tree-cut, left child only.
-		if (GET_BETTER(node) == NULL) {
-			// We have no left child, I guess it's just us.
-			aug->base_case(node->key, node->value, output);
-			return 1;
-		}
-		// Compute the base value just here.
-		AugmentationResult temp;
-		aug->base_case(node->key, node->value, &temp);
-		AugmentationResult better_result;
-		size_t elements = compute_augmentation_cut(aug, GET_BETTER(node), key, comparison_type, true, &better_result);
-		// Early out if the better subtree had no good items at all.
-		if (elements == 0) {
-			*output = temp;
-			return 1;
-		}
-		// This yields the output result.
-		aug->compute(&better_result, &temp, output);
-		return elements + 1;
-	} else if (good_to_go) {
+		return compute_augmentation_cut(aug, GET_BETTER(node), key, comparison_type, comparison == 0, output);
+	} else
+		EDGE_CASE(comparison, GET_BETTER(node), compute_augmentation_cut(aug, GET_BETTER(node), key, comparison_type, true, &better_result))
+	else if (good_to_go) {
 //		cout << "Great at: " << (long long) node->key << endl;
 		// We're on entirely good side of the tree-cut, we can use a cached value!
 		return compute_augmentation(aug, node, output);
@@ -429,13 +434,77 @@ size_t Tree::compute_augmentation_cut(Augmentation* aug, Node* node, void* key, 
 //	cout << "Right at: " << (long long) node->key << endl;
 	// Finally, we're on the good side of the tree-cut, but our right subtree might not be.
 	// Four cases: No children, just left, just right, both -- this handles all of them.
-	AUG_COMPUTE_BOTH_SUBTREES(compute_augmentation_cut(aug, node->left, key, comparison_type, true, &temp), \
-		compute_augmentation_cut(aug, node->right, key, comparison_type, false, &temp))
+	AUG_COMPUTE_BOTH_SUBTREES(compute_augmentation_cut(aug, node->left, key, comparison_type, (comparison_type < 0), &temp), \
+		compute_augmentation_cut(aug, node->right, key, comparison_type, (comparison_type > 0), &temp))
 	*output = double_buf[i];
 	return elements;
 }
 
+size_t Tree::compute_augmentation_range(Augmentation* aug, Node* node, void* low_key, bool low_inclusive, void* high_key, bool high_inclusive, bool good_low, bool good_high, AugmentationResult* output) {
+	int low_comp = cmp_f(node->key, low_key);
+	if (low_comp < 0 or (low_comp == 0 and not low_inclusive)) {
+		cout << "Too low: " << (long long) node->key << endl;
+		// We're too low.
+		if (node->right == NULL)
+			return 0;
+		return compute_augmentation_range(aug, node->right, low_key, low_inclusive, high_key, high_inclusive, low_comp == 0, good_high, output);
+	}
+	int high_comp = cmp_f(node->key, high_key);
+	if (high_comp > 0 or (high_comp == 0 and not high_inclusive)) {
+		cout << "Too high: " << (long long) node->key << endl;
+		// We're too high.
+		if (node->left == NULL)
+			return 0;
+		return compute_augmentation_range(aug, node->left, low_key, low_inclusive, high_key, high_inclusive, good_low, high_comp == 0, output);
+	}
+	cout << "Edge? " << (long long) node->key << endl;
+	// Catch the two edge cases, where the key is one of our inclusive bounds.
+	EDGE_CASE(low_comp, node->right, \
+		compute_augmentation_range(aug, node->right, low_key, low_inclusive, high_key, high_inclusive, true, good_high, &better_result))
+	EDGE_CASE(high_comp, node->left, \
+		compute_augmentation_range(aug, node->left, low_key, low_inclusive, high_key, high_inclusive, good_low, true, &better_result))
+	// Once the code reaches here we know that node is between the two keys.
+	if (good_low and good_high) {
+		cout << "Great: " << (long long) node->key << endl;
+		// We're good on both sides, do the super-efficient thing.
+		return compute_augmentation(aug, node, output);
+	}
+	cout << "Good: " << (long long) node->key << endl;
+	AUG_COMPUTE_BOTH_SUBTREES( \
+		compute_augmentation_range(aug, node->left, low_key, low_inclusive, high_key, high_inclusive, good_low, true, &temp), \
+		compute_augmentation_range(aug, node->right, low_key, low_inclusive, high_key, high_inclusive, true, good_high, &temp))
+	*output = double_buf[i];
+	return elements;
+}
+
+size_t Tree::augment_range(int aug_id, void* low_key, bool low_inclusive, void* high_key, bool high_inclusive, AugmentationResult* output) {
+	assert(aug_ctx.augs.count(aug_id) == 1);
+	Augmentation* aug = &aug_ctx.augs[aug_id];
+	// Do some quick edge-case checking.
+	int comparison = cmp_f(low_key, high_key);
+	// The following case is ambiguous, so our library simply won't handle it.
+	// Should low_inclusive or high_inclusive win, when examining the interval [x, x)?
+	assert(comparison != 0 or low_inclusive == high_inclusive);
+	// We can immediately answer queries where low > high, or low == high and neither end is inclusive.
+	if (comparison > 0 or (comparison == 0 and (not low_inclusive) and not high_inclusive))
+		return 0;
+	if (comparison == 0 and low_inclusive and high_inclusive) {
+		// If low == high, and both ends are inclusive, then we're looking for 
+		// a single item, and can just search for it and call base_case.
+		Node* here = get_node(low_key);
+		if (here == NULL) return 0;
+		aug->base_case(here->key, here->value, output);
+		return 1;
+	}
+	// Note that the above cases exhaustively establish that low_key < high_key.
+	assert(comparison < 0); // If you see this assert fire: BUG BUG BUG!
+	// No easy case was found, we'll have to do the full algorithm.
+	return compute_augmentation_range(aug, root, low_key, low_inclusive, high_key, high_inclusive, false, false, output);
+}
+
 size_t Tree::augment_cut(int aug_id, void* key, int comparison_type, AugmentationResult* output) {
+	// Make sure the requested comparison_type is -2, -1, 1, or 2.
+	assert(comparison_type >= -2 and comparison_type <= 2 and comparison_type != 0);
 	assert(aug_ctx.augs.count(aug_id) == 1);
 	Augmentation* aug = &aug_ctx.augs[aug_id];
 	return compute_augmentation_cut(aug, root, key, comparison_type, false, output);

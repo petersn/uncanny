@@ -15,18 +15,14 @@ struct AugmentationResult;
 struct Augmentation {
 	int aug_id;
 	int schema_index;
-
 	// Should read in a key value pair, and write into output.
 	void (*base_case)(void* key, void* value, AugmentationResult* output);
-
 	// Should read in a and b, and write into output.
 	void (*compute)(const AugmentationResult* a, const AugmentationResult* b, AugmentationResult* output);
-
 	// Should return if a and b are the same.
 	bool (*compare)(const AugmentationResult* a, const AugmentationResult* b);
 
 	Augmentation();
-
 	Augmentation(void (*_base_case)(void* key, void* value, AugmentationResult* output),
 		void (*_compute)(const AugmentationResult* a, const AugmentationResult* b, AugmentationResult* output),
 		bool (*_compare)(const AugmentationResult* a, const AugmentationResult* b));
@@ -46,11 +42,8 @@ struct AugmentationCtx {
 	std::map<int, Augmentation> augs;
 
 	AugmentationCtx();
-
 	int new_augmentation(Augmentation* aug);
-
 	bool delete_augmentation(int aug_id);
-
 	void recompute_schema();
 };
 
@@ -109,6 +102,7 @@ struct Tree {
 	~Tree();
 	void free_subtree(Node* node);
 	void pprint();
+	Node* get_node(void* key);
 	void** get(void* key);
 	void* get_default(void* key, void* otherwise);
 	void insert(void* key, void* value);
@@ -116,6 +110,8 @@ struct Tree {
 	void remove(void* key);
 	size_t compute_augmentation(Augmentation* aug, Node* node, AugmentationResult* output);
 	size_t compute_augmentation_cut(Augmentation* aug, Node* node, void* key, int comparison_type, bool good_to_go, AugmentationResult* output);
+	size_t compute_augmentation_range(Augmentation* aug, Node* node, void* low_key, bool low_inclusive, void* high_key, bool high_inclusive, bool good_low, bool good_high, AugmentationResult* output);
+	size_t augment_range(int aug_id, void* low_key, bool low_inclusive, void* high_key, bool high_inclusive, AugmentationResult* output);
 	size_t augment_cut(int aug_id, void* key, int comparison_type, AugmentationResult* output);
 
 #define _UNCANNY_TREE_AUG_CONV(name) \

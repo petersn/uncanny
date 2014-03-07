@@ -41,6 +41,8 @@ int main(int argc, char** argv) {
 
 	AugmentationResult output;
 
+	t.augment_lt(aug_id, (void*)1000, &output);
+
 //	t.pprint();
 
 	for (int i=0; i<5; i++) {
@@ -53,6 +55,9 @@ int main(int argc, char** argv) {
 		if (i == 3)
 			t.insert((void*)1, (void*)11);
 	}
+
+	t.augment_range(aug_id, (void*)7, false, (void*)26, true, &output);
+	cout << "Range result: " << (long long)output.data.l << endl;
 
 	return 0;
 }
