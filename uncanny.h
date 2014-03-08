@@ -97,6 +97,8 @@ struct Tree {
 	AugmentationCtx aug_ctx;
 	int (*cmp_f)(void* a, void* b);
 	Node* root;
+	void (*key_deallocator)(void* key);
+	void (*value_deallocator)(void* value);
 
 	Tree();
 	~Tree();

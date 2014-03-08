@@ -167,6 +167,8 @@ void Node::pprint(int depth) {
 Tree::Tree() {
 	root = NULL;
 	cmp_f = NULL;
+	key_deallocator = NULL;
+	value_deallocator = NULL;
 }
 
 Tree::~Tree() {
@@ -294,6 +296,11 @@ void Tree::remove(void* key) {
 	}
 	// If there does not exist such an item, we're done!
 	if (here == NULL) return;
+	// Deallocate memory, if required.
+	if (key_deallocator != NULL)
+		key_deallocator(here->key);
+	if (value_deallocator != NULL)
+		value_deallocator(here->value);
 	Node* to_delete = NULL;
 	int child_count = (here->left != NULL) + (here->right != NULL);
 	// Easy case, if we zero or one children, delete here.
