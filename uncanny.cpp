@@ -426,7 +426,6 @@ size_t Tree::compute_augmentation_cut(Augmentation* aug, Node* node, void* key, 
 #define GET_BETTER(node) (comparison_type < 0 ? node->left : node->right)
 #define GET_WORSE(node) (comparison_type < 0 ? node->right : node->left)
 	if (comparison < 0 or (comparison == 0 and (comparison_type == -2 or comparison_type == 2))) {
-//		cout << "Wrong at: " << (long long) node->key << endl;
 		// We're on the wrong side of the tree-cut, go left.
 		if (GET_BETTER(node) == NULL)
 			return 0; // No good value at all!
@@ -434,11 +433,9 @@ size_t Tree::compute_augmentation_cut(Augmentation* aug, Node* node, void* key, 
 	} else
 		EDGE_CASE(comparison, GET_BETTER(node), compute_augmentation_cut(aug, GET_BETTER(node), key, comparison_type, true, &better_result))
 	else if (good_to_go) {
-//		cout << "Great at: " << (long long) node->key << endl;
 		// We're on entirely good side of the tree-cut, we can use a cached value!
 		return compute_augmentation(aug, node, output);
 	}
-//	cout << "Right at: " << (long long) node->key << endl;
 	// Finally, we're on the good side of the tree-cut, but our right subtree might not be.
 	// Four cases: No children, just left, just right, both -- this handles all of them.
 	AUG_COMPUTE_BOTH_SUBTREES(compute_augmentation_cut(aug, node->left, key, comparison_type, (comparison_type < 0), &temp), \
@@ -450,7 +447,6 @@ size_t Tree::compute_augmentation_cut(Augmentation* aug, Node* node, void* key, 
 size_t Tree::compute_augmentation_range(Augmentation* aug, Node* node, void* low_key, bool low_inclusive, void* high_key, bool high_inclusive, bool good_low, bool good_high, AugmentationResult* output) {
 	int low_comp = cmp_f(node->key, low_key);
 	if (low_comp < 0 or (low_comp == 0 and not low_inclusive)) {
-//		cout << "Too low: " << (long long) node->key << endl;
 		// We're too low.
 		if (node->right == NULL)
 			return 0;
@@ -458,14 +454,11 @@ size_t Tree::compute_augmentation_range(Augmentation* aug, Node* node, void* low
 	}
 	int high_comp = cmp_f(node->key, high_key);
 	if (high_comp > 0 or (high_comp == 0 and not high_inclusive)) {
-//		cout << "Too high: " << (long long) node->key << endl;
 		// We're too high.
 		if (node->left == NULL)
 			return 0;
 		return compute_augmentation_range(aug, node->left, low_key, low_inclusive, high_key, high_inclusive, good_low, high_comp == 0, output);
 	}
-//	cout << "Edge? " << (long long) node->key << endl;
-//	cout << "Anything?" << endl;
 	// Catch the two edge cases, where the key is one of our inclusive bounds.
 	EDGE_CASE(low_comp, node->right, \
 		compute_augmentation_range(aug, node->right, low_key, low_inclusive, high_key, high_inclusive, true, good_high, &better_result))
@@ -473,11 +466,9 @@ size_t Tree::compute_augmentation_range(Augmentation* aug, Node* node, void* low
 		compute_augmentation_range(aug, node->left, low_key, low_inclusive, high_key, high_inclusive, good_low, true, &better_result))
 	// Once the code reaches here we know that node is between the two keys.
 	if (good_low and good_high) {
-//		cout << "Great: " << (long long) node->key << endl;
 		// We're good on both sides, do the super-efficient thing.
 		return compute_augmentation(aug, node, output);
 	}
-//	cout << "Good: " << (long long) node->key << endl;
 	AUG_COMPUTE_BOTH_SUBTREES( \
 		compute_augmentation_range(aug, node->left, low_key, low_inclusive, high_key, high_inclusive, good_low, true, &temp), \
 		compute_augmentation_range(aug, node->right, low_key, low_inclusive, high_key, high_inclusive, true, good_high, &temp))
