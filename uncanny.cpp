@@ -351,7 +351,7 @@ void Tree::remove(void* key) {
 	aug->base_case(node->key, node->value, &double_buf[i]); \
 	if (node->left != NULL) { \
 		elements += new_elements = left_comp; \
-                if (new_elements != 0) { \
+		if (new_elements != 0) { \
 			aug->compute(&temp, &double_buf[i], &double_buf[1-i]); \
 			i = 1-i; /* Flip the buffer. */ \
 		} \
